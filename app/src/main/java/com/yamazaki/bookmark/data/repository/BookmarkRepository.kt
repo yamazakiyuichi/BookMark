@@ -2,6 +2,7 @@ package com.yamazaki.bookmark.data.repository
 
 import com.yamazaki.bookmark.data.local.BookmarkDao
 import com.yamazaki.bookmark.data.local.entity.BookmarkEntity
+import com.yamazaki.bookmark.data.remote.ImportedBookmark
 import com.yamazaki.bookmark.data.remote.OgpFetcher
 import com.yamazaki.bookmark.domain.model.Bookmark
 import com.yamazaki.bookmark.domain.model.LinkStatus
@@ -119,5 +120,38 @@ class BookmarkRepository(
         for (bookmark in all) {
             checkAndUpdateLink(bookmark)
         }
+    }
+
+    /**
+     * Import bookmarks from Chrome HTML export.
+     * Skips duplicates. Fetches OGP for thumbnails in background.
+     * Returns (imported count, skipped count).
+     */
+    suspend fun importBookmarks(bookmarks: List<ImportedBookmark>): Pair<Int, Int> {
+        var imported = 0
+        var skipped = 0
+        for (item in bookmarks) {
+            if (dao.getByUrl(item.url) != null) {
+                skipped++
+                continue
+            }
+            val thumbnailUrl = try {
+                ogpFetcher.fetch(item.url).thumbnailUrl
+            } catch (_: Exception) {
+                null
+            }
+            val now = Instant.now()
+            val entity = BookmarkEntity(
+                url = item.url,
+                title = item.title,
+                thumbnailUrl = thumbnailUrl,
+                status = LinkStatus.UNKNOWN.name,
+                createdAt = now.toEpochMilli(),
+                updatedAt = now.toEpochMilli()
+            )
+            dao.insert(entity)
+            imported++
+        }
+        return imported to skipped
     }
 }

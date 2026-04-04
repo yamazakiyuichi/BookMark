@@ -2,6 +2,8 @@ package com.yamazaki.bookmark.ui.screen.list
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +19,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -33,13 +39,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.yamazaki.bookmark.domain.model.Bookmark
 import com.yamazaki.bookmark.ui.component.BookmarkCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,9 +58,18 @@ fun ListScreen(
 ) {
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val isCheckingAll by viewModel.isCheckingAll.collectAsStateWithLifecycle()
+    val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
+
+    // File picker for Chrome bookmark HTML import
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.importFromHtml(context, it) }
+    }
 
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
@@ -71,7 +87,7 @@ fun ListScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
-                    if (isCheckingAll) {
+                    if (isCheckingAll || isImporting) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .size(24.dp)
@@ -86,6 +102,29 @@ fun ListScreen(
                             )
                         }
                     }
+
+                    // Overflow menu
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Chromeブックマークをインポート") },
+                                onClick = {
+                                    showMenu = false
+                                    filePickerLauncher.launch(arrayOf("text/html", "*/*"))
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.FileOpen, contentDescription = null)
+                                },
+                                enabled = !isImporting
+                            )
+                        }
+                    }
                 }
             )
         },
@@ -96,7 +135,7 @@ fun ListScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        if (bookmarks.isEmpty()) {
+        if (bookmarks.isEmpty() && !isImporting) {
             EmptyState(modifier = Modifier.padding(padding))
         } else {
             LazyVerticalGrid(
@@ -112,7 +151,6 @@ fun ListScreen(
                     BookmarkCard(
                         bookmark = bookmark,
                         onClick = {
-                            // Open in Chrome
                             openInChrome(context, bookmark.url)
                         },
                         onLongClick = {
@@ -146,7 +184,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "＋ボタンで追加、またはChromeから共有してください",
+                text = "＋ボタンで追加、Chromeから共有、\nまたはメニューからインポートしてください",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
@@ -156,13 +194,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 
 private fun openInChrome(context: android.content.Context, url: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-        // Try Chrome first
         setPackage("com.android.chrome")
     }
     try {
         context.startActivity(intent)
     } catch (_: Exception) {
-        // Fallback to default browser
         val fallback = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         try {
             context.startActivity(fallback)

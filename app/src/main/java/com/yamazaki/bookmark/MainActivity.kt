@@ -2,9 +2,11 @@ package com.yamazaki.bookmark
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -38,10 +40,16 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val app = application as BookMarkApplication
 
-                // Handle pending share URL
-                pendingShareUrl?.let { url ->
-                    pendingShareUrl = null
-                    navController.navigate(AddRoute(prefillUrl = url))
+                // Navigate to Add screen when share URL arrives
+                // Using LaunchedEffect to avoid composition side-effects
+                val shareUrl = pendingShareUrl
+                LaunchedEffect(shareUrl) {
+                    if (shareUrl != null) {
+                        pendingShareUrl = null
+                        navController.navigate(AddRoute(prefillUrl = shareUrl)) {
+                            launchSingleTop = true
+                        }
+                    }
                 }
 
                 NavHost(
@@ -96,21 +104,49 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent) // Update the stored intent
         handleShareIntent(intent)
     }
 
     private fun handleShareIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
-            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-            val url = extractUrl(sharedText)
-            if (url != null) {
-                pendingShareUrl = url
+        if (intent == null) return
+
+        when (intent.action) {
+            Intent.ACTION_SEND -> {
+                // Handle text/plain shares (Chrome, other browsers)
+                val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                val sharedSubject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
+
+                val url = extractUrl(sharedText) ?: extractUrl(sharedSubject)
+                if (url != null) {
+                    pendingShareUrl = url
+                    // Clear the intent action to prevent re-processing
+                    intent.action = null
+                } else if (sharedText != null || sharedSubject != null) {
+                    // Had text but no URL found
+                    Toast.makeText(this, "URLが見つかりませんでした", Toast.LENGTH_SHORT).show()
+                }
+            }
+            Intent.ACTION_VIEW -> {
+                // Handle direct URL opens (e.g., from other apps)
+                val url = intent.data?.toString()
+                if (url != null && url.startsWith("http")) {
+                    pendingShareUrl = url
+                    intent.action = null
+                }
             }
         }
     }
 
-    private fun extractUrl(text: String): String? {
-        val urlPattern = Regex("""https?://\S+""")
-        return urlPattern.find(text)?.value
+    private fun extractUrl(text: String?): String? {
+        if (text.isNullOrBlank()) return null
+
+        // Try to find a URL in the text
+        // Chrome typically sends just the URL, or "Title - URL", or "Title\nURL"
+        val urlPattern = Regex("""https?://[^\s<>"{}|\\^`\[\]]+""")
+        val match = urlPattern.find(text)?.value ?: return null
+
+        // Clean trailing punctuation that's likely not part of the URL
+        return match.trimEnd('.', ',', ';', ':', '!', '?', ')', ']', '>')
     }
 }
