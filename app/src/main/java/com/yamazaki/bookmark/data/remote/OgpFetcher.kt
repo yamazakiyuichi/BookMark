@@ -6,7 +6,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
 import java.util.concurrent.TimeUnit
-import java.util.regex.Pattern
 
 data class OgpResult(
     val title: String?,
@@ -22,10 +21,10 @@ class OgpFetcher {
         .build()
 
     private val youtubePatterns = listOf(
-        Pattern.compile("(?:https?://)?(?:www\.)?youtube\.com/watch\?.*v=([a-zA-Z0-9_-]{11})"),
-        Pattern.compile("(?:https?://)?youtu\.be/([a-zA-Z0-9_-]{11})"),
-        Pattern.compile("(?:https?://)?(?:www\.)?youtube\.com/embed/([a-zA-Z0-9_-]{11})"),
-        Pattern.compile("(?:https?://)?(?:www\.)?youtube\.com/shorts/([a-zA-Z0-9_-]{11})")
+        Regex("""(?:https?://)?(?:www\.)?youtube\.com/watch\?.*v=([a-zA-Z0-9_-]{11})"""),
+        Regex("""(?:https?://)?youtu\.be/([a-zA-Z0-9_-]{11})"""),
+        Regex("""(?:https?://)?(?:www\.)?youtube\.com/embed/([a-zA-Z0-9_-]{11})"""),
+        Regex("""(?:https?://)?(?:www\.)?youtube\.com/shorts/([a-zA-Z0-9_-]{11})""")
     )
 
     suspend fun fetch(url: String): OgpResult = withContext(Dispatchers.IO) {
@@ -59,10 +58,7 @@ class OgpFetcher {
 
     private fun extractYouTubeVideoId(url: String): String? {
         for (pattern in youtubePatterns) {
-            val matcher = pattern.matcher(url)
-            if (matcher.find()) {
-                return matcher.group(1)
-            }
+            pattern.find(url)?.groupValues?.get(1)?.let { return it }
         }
         return null
     }
