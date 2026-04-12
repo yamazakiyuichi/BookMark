@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android Auto Backup rules (API 23+).
+    Ensures the bookmark database and shared preferences are included in
+    device backups and restored when the app is reinstalled or moved to a
+    new device.
+-->
+<full-backup-content>
+    <!-- Include the Room database so bookmarks survive app updates / device transfers -->
+    <include domain="database" path="bookmark_database" />
+    <include domain="database" path="bookmark_database-shm" />
+    <include domain="database" path="bookmark_database-wal" />
+    <include domain="sharedpref" path="." />
+</full-backup-content>

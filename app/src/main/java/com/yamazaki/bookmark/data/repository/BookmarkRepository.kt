@@ -123,6 +123,36 @@ class BookmarkRepository(
     }
 
     /**
+     * Export all bookmarks as a Netscape Bookmark File (Chrome-compatible HTML).
+     * Returns the HTML string, or null if there are no bookmarks.
+     */
+    suspend fun exportBookmarksAsHtml(): String? {
+        val bookmarks = dao.getAll().map { it.toDomain() }
+        if (bookmarks.isEmpty()) return null
+
+        val sb = StringBuilder()
+        sb.appendLine("<!DOCTYPE NETSCAPE-Bookmark-file-1>")
+        sb.appendLine("<!-- This is an automatically generated file.")
+        sb.appendLine("     It will be read and overwritten.")
+        sb.appendLine("     DO NOT EDIT! -->")
+        sb.appendLine("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">")
+        sb.appendLine("<TITLE>Bookmarks</TITLE>")
+        sb.appendLine("<H1>Bookmarks</H1>")
+        sb.appendLine("<DL><p>")
+        for (bookmark in bookmarks) {
+            val addDate = bookmark.createdAt.epochSecond
+            val escapedTitle = bookmark.title
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+            sb.appendLine("    <DT><A HREF=\"${bookmark.url}\" ADD_DATE=\"$addDate\">$escapedTitle</A>")
+        }
+        sb.appendLine("</DL><p>")
+        return sb.toString()
+    }
+
+    /**
      * Import bookmarks from Chrome HTML export.
      * Skips duplicates. Fetches OGP for thumbnails in background.
      * Returns (imported count, skipped count).

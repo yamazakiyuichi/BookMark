@@ -9,7 +9,7 @@ import com.yamazaki.bookmark.data.local.entity.BookmarkEntity
 @Database(
     entities = [BookmarkEntity::class],
     version = 1,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class BookmarkDatabase : RoomDatabase() {
 

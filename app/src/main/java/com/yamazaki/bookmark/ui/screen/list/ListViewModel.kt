@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 class ListViewModel(
     private val repository: BookmarkRepository
@@ -29,6 +30,9 @@ class ListViewModel(
 
     private val _isImporting = MutableStateFlow(false)
     val isImporting: StateFlow<Boolean> = _isImporting.asStateFlow()
+
+    private val _isExporting = MutableStateFlow(false)
+    val isExporting: StateFlow<Boolean> = _isExporting.asStateFlow()
 
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
@@ -72,6 +76,32 @@ class ListViewModel(
                 _snackbarMessage.value = "インポートに失敗しました: ${e.message}"
             } finally {
                 _isImporting.value = false
+            }
+        }
+    }
+
+    fun exportToHtml(context: Context, uri: Uri) {
+        if (_isExporting.value) return
+        viewModelScope.launch {
+            _isExporting.value = true
+            try {
+                val html = withContext(Dispatchers.IO) {
+                    repository.exportBookmarksAsHtml()
+                }
+                if (html == null) {
+                    _snackbarMessage.value = "エクスポートするブックマークがありません"
+                    return@launch
+                }
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.writer(Charsets.UTF_8).use { it.write(html) }
+                    } ?: throw IOException("ファイルを開けませんでした")
+                }
+                _snackbarMessage.value = "エクスポート完了"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "エクスポートに失敗しました: ${e.message}"
+            } finally {
+                _isExporting.value = false
             }
         }
     }
