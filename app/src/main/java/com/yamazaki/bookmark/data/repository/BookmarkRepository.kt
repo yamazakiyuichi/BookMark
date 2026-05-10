@@ -28,6 +28,9 @@ class BookmarkRepository(
     fun observeAllBookmarks(): Flow<List<Bookmark>> =
         dao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
+    fun observeBookmarksWithThumbnail(): Flow<List<Bookmark>> =
+        dao.observeAllWithThumbnail().map { entities -> entities.map { it.toDomain() } }
+
     suspend fun getBookmarkById(id: Long): Bookmark? =
         dao.getById(id)?.toDomain()
 

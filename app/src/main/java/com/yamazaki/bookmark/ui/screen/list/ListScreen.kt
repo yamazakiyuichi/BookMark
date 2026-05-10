@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -55,7 +56,8 @@ import com.yamazaki.bookmark.ui.component.BookmarkCard
 fun ListScreen(
     viewModel: ListViewModel,
     onNavigateToAdd: () -> Unit,
-    onNavigateToDetail: (Long) -> Unit
+    onNavigateToDetail: (Long) -> Unit,
+    onNavigateToFeed: () -> Unit
 ) {
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val isCheckingAll by viewModel.isCheckingAll.collectAsStateWithLifecycle()
@@ -104,6 +106,12 @@ fun ListScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
+                        IconButton(onClick = onNavigateToFeed) {
+                            Icon(
+                                imageVector = Icons.Default.Slideshow,
+                                contentDescription = "フィードで見る"
+                            )
+                        }
                         IconButton(onClick = { viewModel.checkAllLinks() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
