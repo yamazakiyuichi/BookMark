@@ -49,13 +49,13 @@ fun FeedScreen(
     onNavigateBack: () -> Unit
 ) {
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    // rememberPagerState must be called unconditionally (Rules of Compose)
+    val pagerState = rememberPagerState(pageCount = { bookmarks.size })
 
     if (bookmarks.isEmpty()) {
         FeedEmptyState(onNavigateBack = onNavigateBack)
         return
     }
-
-    val pagerState = rememberPagerState(pageCount = { bookmarks.size })
 
     Box(
         modifier = Modifier
@@ -66,8 +66,10 @@ fun FeedScreen(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
+            // Guard against list shrinking while pager holds a stale page index
+            val bookmark = bookmarks.getOrNull(page) ?: return@VerticalPager
             FeedPage(
-                bookmark = bookmarks[page],
+                bookmark = bookmark,
                 isActive = page == pagerState.settledPage
             )
         }
@@ -157,6 +159,10 @@ private fun FeedWebView(bookmark: Bookmark) {
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> webViewRef?.onPause()
                 Lifecycle.Event.ON_RESUME -> webViewRef?.onResume()
+                Lifecycle.Event.ON_DESTROY -> {
+                    webViewRef?.destroy()
+                    webViewRef = null
+                }
                 else -> {}
             }
         }
