@@ -2,6 +2,8 @@ name: Build & Release APK
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -30,9 +32,20 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
+      - name: Get version name
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "name=latest" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.name }}
+          name: ${{ steps.version.outputs.name }}
           files: app/build/outputs/apk/debug/app-debug.apk
           generate_release_notes: true
         env:
