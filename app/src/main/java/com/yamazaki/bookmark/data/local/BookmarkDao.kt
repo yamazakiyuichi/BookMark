@@ -15,6 +15,9 @@ interface BookmarkDao {
     @Query("SELECT * FROM bookmarks ORDER BY created_at DESC")
     fun observeAll(): Flow<List<BookmarkEntity>>
 
+    @Query("SELECT * FROM bookmarks WHERE thumbnail_url IS NOT NULL AND thumbnail_url != '' ORDER BY created_at DESC")
+    fun observeAllWithThumbnail(): Flow<List<BookmarkEntity>>
+
     @Query("SELECT * FROM bookmarks ORDER BY created_at DESC")
     suspend fun getAll(): List<BookmarkEntity>
 

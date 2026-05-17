@@ -10,3 +10,6 @@ data class AddRoute(val prefillUrl: String? = null)
 
 @Serializable
 data class DetailRoute(val bookmarkId: Long)
+
+@Serializable
+object FeedRoute

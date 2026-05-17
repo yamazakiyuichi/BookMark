@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,21 +56,28 @@ import com.yamazaki.bookmark.ui.component.BookmarkCard
 fun ListScreen(
     viewModel: ListViewModel,
     onNavigateToAdd: () -> Unit,
-    onNavigateToDetail: (Long) -> Unit
+    onNavigateToDetail: (Long) -> Unit,
+    onNavigateToFeed: () -> Unit
 ) {
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val isCheckingAll by viewModel.isCheckingAll.collectAsStateWithLifecycle()
     val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
+    val isExporting by viewModel.isExporting.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
 
-    // File picker for Chrome bookmark HTML import
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { viewModel.importFromHtml(context, it) }
+    }
+
+    val fileSaverLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/html")
+    ) { uri: Uri? ->
+        uri?.let { viewModel.exportToHtml(context, it) }
     }
 
     LaunchedEffect(snackbarMessage) {
@@ -87,7 +96,7 @@ fun ListScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
-                    if (isCheckingAll || isImporting) {
+                    if (isCheckingAll || isImporting || isExporting) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .size(24.dp)
@@ -95,6 +104,12 @@ fun ListScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
+                        IconButton(onClick = onNavigateToFeed) {
+                            Icon(
+                                imageVector = Icons.Default.Slideshow,
+                                contentDescription = "フィードで見る"
+                            )
+                        }
                         IconButton(onClick = { viewModel.checkAllLinks() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
@@ -103,7 +118,6 @@ fun ListScreen(
                         }
                     }
 
-                    // Overflow menu
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
@@ -121,7 +135,18 @@ fun ListScreen(
                                 leadingIcon = {
                                     Icon(Icons.Default.FileOpen, contentDescription = null)
                                 },
-                                enabled = !isImporting
+                                enabled = !isImporting && !isExporting
+                            )
+                            DropdownMenuItem(
+                                text = { Text("ブックマークをエクスポート") },
+                                onClick = {
+                                    showMenu = false
+                                    fileSaverLauncher.launch("bookmarks.html")
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.SaveAlt, contentDescription = null)
+                                },
+                                enabled = !isImporting && !isExporting
                             )
                         }
                     }
@@ -150,12 +175,8 @@ fun ListScreen(
                 items(bookmarks, key = { it.id }) { bookmark ->
                     BookmarkCard(
                         bookmark = bookmark,
-                        onClick = {
-                            openInChrome(context, bookmark.url)
-                        },
-                        onLongClick = {
-                            onNavigateToDetail(bookmark.id)
-                        }
+                        onClick = { openInChrome(context, bookmark.url) },
+                        onLongClick = { onNavigateToDetail(bookmark.id) }
                     )
                 }
             }

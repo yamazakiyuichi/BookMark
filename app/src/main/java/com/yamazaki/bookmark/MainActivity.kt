@@ -17,11 +17,14 @@ import androidx.navigation.toRoute
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yamazaki.bookmark.ui.navigation.AddRoute
 import com.yamazaki.bookmark.ui.navigation.DetailRoute
+import com.yamazaki.bookmark.ui.navigation.FeedRoute
 import com.yamazaki.bookmark.ui.navigation.ListRoute
 import com.yamazaki.bookmark.ui.screen.add.AddScreen
 import com.yamazaki.bookmark.ui.screen.add.AddViewModel
 import com.yamazaki.bookmark.ui.screen.detail.DetailScreen
 import com.yamazaki.bookmark.ui.screen.detail.DetailViewModel
+import com.yamazaki.bookmark.ui.screen.feed.FeedScreen
+import com.yamazaki.bookmark.ui.screen.feed.FeedViewModel
 import com.yamazaki.bookmark.ui.screen.list.ListScreen
 import com.yamazaki.bookmark.ui.screen.list.ListViewModel
 import com.yamazaki.bookmark.ui.theme.BookMarkTheme
@@ -67,6 +70,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onNavigateToDetail = { id ->
                                 navController.navigate(DetailRoute(bookmarkId = id))
+                            },
+                            onNavigateToFeed = {
+                                navController.navigate(FeedRoute)
                             }
                         )
                     }
@@ -93,6 +99,15 @@ class MainActivity : ComponentActivity() {
                             )
                         )
                         DetailScreen(
+                            viewModel = vm,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable<FeedRoute> {
+                        val vm: FeedViewModel = viewModel(
+                            factory = FeedViewModel.Factory(app.repository)
+                        )
+                        FeedScreen(
                             viewModel = vm,
                             onNavigateBack = { navController.popBackStack() }
                         )
