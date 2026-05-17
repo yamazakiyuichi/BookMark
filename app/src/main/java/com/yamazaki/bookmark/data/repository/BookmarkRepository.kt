@@ -136,10 +136,11 @@ class BookmarkRepository(
         sb.appendLine("<DL><p>")
         for (bookmark in bookmarks) {
             val addDate = bookmark.createdAt.epochSecond
+            val escapedUrl = bookmark.url.replace("&", "&amp;").replace("\"", "&quot;")
             val escapedTitle = bookmark.title
                 .replace("&", "&amp;").replace("<", "&lt;")
                 .replace(">", "&gt;").replace("\"", "&quot;")
-            sb.appendLine("    <DT><A HREF=\"${bookmark.url}\" ADD_DATE=\"$addDate\">$escapedTitle</A>")
+            sb.appendLine("    <DT><A HREF=\"$escapedUrl\" ADD_DATE=\"$addDate\">$escapedTitle</A>")
         }
         sb.appendLine("</DL><p>")
         return sb.toString()
