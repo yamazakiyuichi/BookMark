@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.yamazaki.bookmark"
+        applicationId = "com.yamazaki.bookmark.v100"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
